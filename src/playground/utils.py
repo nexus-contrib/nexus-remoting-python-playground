@@ -4,11 +4,25 @@ import inspect
 import os
 from typing import List
 
+from nexus_extensibility import ILogger, LogLevel
 
-def load_extensions(extension_folder_path: str) -> List:
+
+def load_extensions(extension_folder_path: str, logger: ILogger) -> List:
+
     extension_files = glob.glob(f"{extension_folder_path}/*/main.py")
-    modules = [_loadModule(extension_file) for extension_file in extension_files]
-    extensions = [potential_extension[1] for module in modules for potential_extension in inspect.getmembers(module) if inspect.isclass(potential_extension[1])]
+    extensions = []
+
+    for extension_file in extension_files:
+
+        try:
+            module = _loadModule(extension_file[len(extension_folder_path) + 1:])
+            potential_extensions = [potential_extension[1] for potential_extension in inspect.getmembers(module) if inspect.isclass(potential_extension[1])]
+
+            for potential_extension in potential_extensions:
+                extensions.append(potential_extension)
+
+        except Exception as ex:
+            logger.log(LogLevel.Debug, f"Unable to load module {extension_file}. Reason: {str(ex)}")
 
     return extensions
 

@@ -1,16 +1,9 @@
 import asyncio
 import sys
-from typing import Awaitable
-from .utils import load_extensions
 
-from nexus_extensibility import DataSourceContext, IDataSource, ILogger
 from nexus_remoting import RemoteCommunicator
 
-
-class PlaygroundDataSource(IDataSource):
-    
-    async def set_context(self, context: DataSourceContext, logger: ILogger) -> None:
-        a = load_extensions("playground")
+from core import PlaygroundDataSource
 
 # args
 if len(sys.argv) < 3:
