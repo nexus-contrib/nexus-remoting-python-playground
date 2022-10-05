@@ -1,0 +1,15 @@
+{
+  "include": [
+    "src/playground",
+    "tests/playground-tests"
+  ],
+  "stubPath": "",
+  "executionEnvironments":[
+    {
+      "root": ".",
+      "extraPaths": [
+        "src/playground"
+      ]
+    }
+  ]
+}

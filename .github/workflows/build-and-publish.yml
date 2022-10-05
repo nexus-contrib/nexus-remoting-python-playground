@@ -1,0 +1,150 @@
+name: Build and Publish
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+
+    tags:
+      - '*'
+
+jobs:
+
+  build:
+
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Fetch tags
+        run: git fetch --tags --force
+
+      - name: Metadata
+        run: echo "IS_RELEASE=${{ startsWith(github.ref, 'refs/tags/') }}" >> $GITHUB_ENV
+          
+      - name: Environment
+        run: |
+          echo "VERSION=$(python build/print_version.py ${{ github.run_number }} ${{ env.IS_RELEASE }} false)" >> $GITHUB_ENV
+          echo "PYPI_VERSION=$(python build/print_version.py  ${{ github.run_number }} ${{ env.IS_RELEASE }} true)" >> $GITHUB_ENV
+          echo "$(python build/print_solution.py)" >> $GITHUB_ENV
+
+      - name: Extract annotation tag
+        if: ${{ env.IS_RELEASE == 'true' }}
+        run: python build/create_tag_body.py
+
+      - name: Set up Python 
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+
+      - name: Install
+        run: |
+          sudo apt install jq
+          npm install -g pyright
+          python -m pip install build wheel pytest pytest-asyncio
+          python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ nexus-extensibility
+
+      - name: Prepare
+        run: |
+         chmod +x tests/Nexus.Sources.Remote.Tests/bash/remote.sh
+
+      - name: Build
+        run: |
+          dotnet publish -c Release -o publish src/Nexus.Sources.Remote/Nexus.Sources.Remote.csproj
+          dotnet build -c Release /p:GeneratePackage=true src/remoting/dotnet-remoting/dotnet-remoting.csproj
+          python -m build --wheel --outdir artifacts/packages --no-isolation src/remoting/python-remoting
+
+      - name: Test
+        run: |
+          dotnet test -c Release /p:BuildProjectReferences=false --filter TestCategory=local
+          pyright
+          pytest
+          sudo bash tests/Nexus.Sources.Remote.Tests/SetupDockerTests.sh
+
+      - name: Pack Publish Artifacts
+        run: |
+          mkdir artifacts/publish
+          cd publish
+          tar -zcvf ../artifacts/publish/assets.tar.gz *
+          cd -
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifacts
+          path: |
+            artifacts/tag_body.txt
+            artifacts/packages/
+            artifacts/publish/
+
+    outputs:
+      is_release: ${{ env.IS_RELEASE }}
+      version: ${{ env.VERSION }}
+
+  publish_dev:
+
+    needs: build
+    name: Publish (dev)
+    runs-on: ubuntu-latest
+
+    if: ${{ needs.build.outputs.is_release != 'true' }}
+
+    steps:
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: artifacts
+          path: artifacts
+
+      # GitHub Package Registry is broken by design: https://github.community/t/download-from-github-package-registry-without-authentication/14407/138
+      - name: Nuget package (MyGet)
+        run: dotnet nuget push 'artifacts/packages/*.nupkg' --api-key ${MYGET_API_KEY} --source https://www.myget.org/F/apollo3zehn-dev/api/v3/index.json
+        env:
+          MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
+
+      # GitHub Package Registry does not support Python packages: https://github.community/t/pypi-compatible-github-package-registry/14615
+      - name: Python package (MyGet)
+        run: 'for filePath in artifacts/packages/*.whl; do curl -k -X POST https://www.myget.org/F/apollo3zehn-dev/python/upload -H "Authorization: Bearer ${MYGET_API_KEY}" -F "data=@$filePath"; done'
+        env:
+          MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
+
+  publish_release:
+
+    needs: build
+    name: Publish (release)
+    runs-on: ubuntu-latest
+
+    if: ${{ needs.build.outputs.is_release == 'true' }}
+
+    steps:
+
+      - name: Install
+        run: |
+          python -m pip install twine
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: artifacts
+          path: artifacts
+
+      - name: GitHub Release Artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: artifacts/tag_body.txt
+          files: artifacts/publish/assets.tar.gz
+
+      - name: Nuget package (Nuget)
+        run: dotnet nuget push 'artifacts/packages/*.nupkg' --api-key ${NUGET_API_KEY} --source https://api.nuget.org/v3/index.json
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+
+      - name: Python Package (PyPI)
+        run: twine upload artifacts/packages/*.whl -u__token__ -p"${PYPI_API_KEY}"
+        env:
+          PYPI_API_KEY: ${{ secrets.PYPI_API_KEY }}
