@@ -1,12 +1,13 @@
 import math
 from datetime import datetime
 from gettext import Catalog
+from typing import Callable, cast
 
 import pytest
 from core import PlaygroundDataSource
 from nexus_extensibility import (CatalogItem, DataSourceContext,
                                  ExtensibilityUtilities, ILogger, LogLevel,
-                                 ReadRequest)
+                                 ReadDataHandler, ReadRequest)
 
 
 class _NullLogger(ILogger):
@@ -47,8 +48,8 @@ async def playground_test():
         begin=datetime(2020, 1, 1), 
         end=datetime(2020, 1, 1), 
         requests=[request],
-        read_data=None,
-        report_progress=None)
+        read_data=cast(ReadDataHandler, None),
+        report_progress=cast(Callable[[float], None], None))
 
     # 
     assert len(registrations) == 2
