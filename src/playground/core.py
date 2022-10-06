@@ -154,4 +154,4 @@ class PlaygroundDataSource(IDataSource):
         return self._mount_path + catalog_id
 
     def _get_original_catalog_id(self, catalog_id: str) -> str:
-        return catalog_id[len(self._mount_path):]
+        return catalog_id[len(self._mount_path + catalog_id):]
