@@ -1,10 +1,8 @@
 import dataclasses
-from gettext import Catalog
 import inspect
 import sys
 from datetime import datetime
-from typing import Awaitable, Callable, Dict, List, Tuple, cast
-from zoneinfo import available_timezones
+from typing import Callable, Dict, List, Tuple, cast
 
 from nexus_extensibility import (CatalogRegistration, DataSourceContext,
                                  IDataSource, ILogger, LogLevel,
@@ -15,7 +13,6 @@ from utils import load_extensions
 
 class PlaygroundDataSource(IDataSource):
 
-    _mount_path: str
     _data_source_map: Dict[IDataSource, str]
     _logger: ILogger
 
@@ -25,7 +22,7 @@ class PlaygroundDataSource(IDataSource):
 
         # mount path
         if context.source_configuration is not None and "mount-path" in context.source_configuration:
-            self._mount_path = cast(str, context.source_configuration["mount-path"])
+            mount_path = cast(str, context.source_configuration["mount-path"])
 
         else:
             raise Exception("The mount-path property is not set.")
@@ -48,7 +45,7 @@ class PlaygroundDataSource(IDataSource):
             for data_source_type in filtered_data_source_types:
                 data_source = data_source_type()
                 user_name = data_source.__module__.split('.')[0].upper()
-                base_path = f"{self._mount_path}/{user_name}"
+                base_path = f"{mount_path}/{user_name}"
 
                 self._data_source_map[data_source] = base_path
 
@@ -61,15 +58,17 @@ class PlaygroundDataSource(IDataSource):
 
     async def get_catalog_registrations(self, path: str) -> List[CatalogRegistration]:
 
-        if path == "/":
-            path = self._mount_path + "/"
-
         registrations = []
 
         for (data_source, base_path) in self._data_source_map.items():
 
+            actual_path = path
+
+            if actual_path == "/":
+                actual_path = base_path + "/"
+
             try:
-                original_path = self._get_original_catalog_id(path)
+                original_path = self._get_original_catalog_id(base_path, actual_path)
 
                 for registration in await data_source.get_catalog_registrations(original_path):
 
@@ -88,41 +87,41 @@ class PlaygroundDataSource(IDataSource):
 
     async def get_catalog(self, catalog_id: str) -> ResourceCatalog:
 
-        data_source = next((current for (current, base_path) in self._data_source_map.items() if catalog_id.startswith(base_path)), None)
+        (data_source, base_path) = next(((current1, current2) for (current1, current2) in self._data_source_map.items() if catalog_id.startswith(current2)), None)
 
         if data_source is None:
             raise Exception(f"The data source for catalog {catalog_id} could not be found.")
 
-        original_catalog_id = self._get_original_catalog_id(catalog_id)
+        original_catalog_id = self._get_original_catalog_id(base_path, catalog_id)
         catalog = await data_source.get_catalog(original_catalog_id)
 
         if catalog.id != original_catalog_id:
             raise Exception("The returned catalog id does not match the requested catalog id.")
 
-        catalog = dataclasses.replace(catalog, id = self._get_extended_catalog_id(catalog.id))
+        catalog = dataclasses.replace(catalog, id = self._get_extended_catalog_id(base_path, catalog.id))
 
         return catalog
 
     async def get_time_range(self, catalog_id: str) -> Tuple[datetime, datetime]:
 
-        data_source = next((current for (current, base_path) in self._data_source_map.items() if catalog_id.startswith(base_path)), None)
+        (data_source, base_path) = next(((current1, current2) for (current1, current2) in self._data_source_map.items() if catalog_id.startswith(current2)), None)
 
         if data_source is None:
             raise Exception(f"The data source for catalog {catalog_id} could not be found.")
 
-        original_catalog_id = self._get_original_catalog_id(catalog_id)
+        original_catalog_id = self._get_original_catalog_id(base_path, catalog_id)
         time_range = await data_source.get_time_range(original_catalog_id)
 
         return time_range
 
     async def get_availability(self, catalog_id: str, begin: datetime, end: datetime) -> float:
         
-        data_source = next((current for (current, base_path) in self._data_source_map.items() if catalog_id.startswith(base_path)), None)
+        (data_source, base_path) = next(((current1, current2) for (current1, current2) in self._data_source_map.items() if catalog_id.startswith(current2)), None)
 
         if data_source is None:
             raise Exception(f"The data source for catalog {catalog_id} could not be found.")
 
-        original_catalog_id = self._get_original_catalog_id(catalog_id)
+        original_catalog_id = self._get_original_catalog_id(base_path, catalog_id)
         availability = await data_source.get_availability(original_catalog_id, begin, end)
 
         return availability
@@ -138,20 +137,20 @@ class PlaygroundDataSource(IDataSource):
         for request in requests:
 
             catalog_id = request.catalog_item.catalog.id
-            data_source = next((current for (current, base_path) in self._data_source_map.items() if catalog_id.startswith(base_path)), None)
+            (data_source, base_path) = next(((current1, current2) for (current1, current2) in self._data_source_map.items() if catalog_id.startswith(current2)), None)
 
             if data_source is None:
                 raise Exception(f"The data source for catalog {catalog_id} could not be found.")
 
-            original_catalog_id = self._get_original_catalog_id(catalog_id)
+            original_catalog_id = self._get_original_catalog_id(base_path, catalog_id)
             original_catalog = dataclasses.replace(request.catalog_item.catalog, id=original_catalog_id)
             original_catalog_item = dataclasses.replace(request.catalog_item, catalog=original_catalog)
             original_request = dataclasses.replace(request, catalog_item=original_catalog_item)
 
             await data_source.read(begin, end, [original_request], read_data, report_progress)
 
-    def _get_extended_catalog_id(self, catalog_id: str) -> str:
-        return self._mount_path + catalog_id
+    def _get_extended_catalog_id(self, base_path: str, catalog_id: str) -> str:
+        return base_path + catalog_id
 
-    def _get_original_catalog_id(self, catalog_id: str) -> str:
-        return catalog_id[len(self._mount_path + catalog_id):]
+    def _get_original_catalog_id(self, base_path: str, catalog_id: str) -> str:
+        return catalog_id[len(base_path):]
