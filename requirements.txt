@@ -1,1 +1,2 @@
 nexus-remoting~=1.0.0b16182
+numpy~=1.21.0
