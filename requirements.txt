@@ -1,2 +1,2 @@
-nexus-remoting==1.0.1
+nexus-remoting==2.0.0b1
 pandas~=1.5.0
