@@ -27,11 +27,11 @@ class MyDataSource(SimpleDataSource):
         else:
             return []
 
-    async def get_catalog(self, catalog_id: str) -> ResourceCatalog:
+    async def enrich_catalog(self, catalog: ResourceCatalog) -> ResourceCatalog:
 
-        # ensure we agree on the requested catalog
-        if (catalog_id != "/MY_CATALOG"):
-            raise Exception(f"Unknown catalog {catalog_id}.")
+        # Ensure we agree on the requested catalog
+        if (catalog.id != "/MY_CATALOG"):
+            raise Exception(f"Unknown catalog {catalog.id}.")
 
         representation = Representation(NexusDataType.FLOAT64, sample_period=timedelta(seconds=1))
 
@@ -46,7 +46,7 @@ class MyDataSource(SimpleDataSource):
         with open("/var/lib/playground/README.md", "r") as readme_file:
             readme = readme_file.read()
 
-        catalog = ResourceCatalogBuilder(catalog_id) \
+        catalog = ResourceCatalogBuilder(catalog.id) \
             .with_readme(readme) \
             .add_resource(resource) \
             .build()
