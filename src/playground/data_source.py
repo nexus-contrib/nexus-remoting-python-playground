@@ -4,6 +4,8 @@ import sys
 from datetime import datetime
 from typing import Callable, Tuple, cast
 
+import numpy # required to make it available in user defined playground extensions
+import pandas # required to make it available in user defined playground extensions
 from nexus_extensibility import (CatalogRegistration, DataSourceContext,
                                  IDataSource, ILogger, LogLevel,
                                  ReadDataHandler, ReadRequest, ResourceCatalog)
