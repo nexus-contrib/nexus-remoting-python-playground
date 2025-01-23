@@ -18,8 +18,8 @@ class MyDataSource(SimpleDataSource):
         else:
             return []
 
-    async def get_catalog(self, catalog_id: str) -> ResourceCatalog:
-        return ResourceCatalog(catalog_id)
+    async def enrich_catalog(self, catalog: ResourceCatalog) -> ResourceCatalog:
+        return ResourceCatalog(catalog.id)
 
     async def read(
         self,

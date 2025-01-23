@@ -2,7 +2,7 @@ import dataclasses
 import inspect
 import sys
 from datetime import datetime
-from typing import Callable, Dict, List, Tuple, cast
+from typing import Callable, Tuple, cast
 
 from nexus_extensibility import (CatalogRegistration, DataSourceContext,
                                  IDataSource, ILogger, LogLevel,
@@ -13,7 +13,7 @@ from utils import load_extensions
 
 class PlaygroundDataSource(IDataSource):
 
-    _data_source_map: Dict[IDataSource, str]
+    _data_source_map: dict[IDataSource, str]
     _logger: ILogger
 
     async def set_context(self, context: DataSourceContext, logger: ILogger) -> None:
@@ -56,7 +56,7 @@ class PlaygroundDataSource(IDataSource):
         for data_source in self._data_source_map:
             await data_source.set_context(context, logger)
 
-    async def get_catalog_registrations(self, path: str) -> List[CatalogRegistration]:
+    async def get_catalog_registrations(self, path: str) -> list[CatalogRegistration]:
 
         registrations = []
 
@@ -85,15 +85,17 @@ class PlaygroundDataSource(IDataSource):
 
         return registrations
 
-    async def get_catalog(self, catalog_id: str) -> ResourceCatalog:
+    async def enrich_catalog(self, catalog: ResourceCatalog) -> ResourceCatalog:
 
-        (data_source, base_path) = next(((current1, current2) for (current1, current2) in self._data_source_map.items() if catalog_id.startswith(current2)), None)
+        # TODO merge old and new catalogs (not yet possible)
 
-        if data_source is None:
-            raise Exception(f"The data source for catalog {catalog_id} could not be found.")
+        (data_source, base_path) = next(((current1, current2) for (current1, current2) in self._data_source_map.items() if catalog.id.startswith(current2)), [None])
 
-        original_catalog_id = self._get_original_catalog_id(base_path, catalog_id)
-        catalog = await data_source.get_catalog(original_catalog_id)
+        if data_source is None or base_path is None:
+            raise Exception(f"The data source for catalog {catalog.id} could not be found.")
+
+        original_catalog_id = self._get_original_catalog_id(base_path, catalog.id)
+        catalog = await data_source.enrich_catalog(ResourceCatalog(original_catalog_id))
 
         if catalog.id != original_catalog_id:
             raise Exception("The returned catalog id does not match the requested catalog id.")
@@ -104,9 +106,9 @@ class PlaygroundDataSource(IDataSource):
 
     async def get_time_range(self, catalog_id: str) -> Tuple[datetime, datetime]:
 
-        (data_source, base_path) = next(((current1, current2) for (current1, current2) in self._data_source_map.items() if catalog_id.startswith(current2)), None)
+        (data_source, base_path) = next(((current1, current2) for (current1, current2) in self._data_source_map.items() if catalog_id.startswith(current2)), [None])
 
-        if data_source is None:
+        if data_source is None or base_path is None:
             raise Exception(f"The data source for catalog {catalog_id} could not be found.")
 
         original_catalog_id = self._get_original_catalog_id(base_path, catalog_id)
@@ -116,9 +118,9 @@ class PlaygroundDataSource(IDataSource):
 
     async def get_availability(self, catalog_id: str, begin: datetime, end: datetime) -> float:
         
-        (data_source, base_path) = next(((current1, current2) for (current1, current2) in self._data_source_map.items() if catalog_id.startswith(current2)), None)
+        (data_source, base_path) = next(((current1, current2) for (current1, current2) in self._data_source_map.items() if catalog_id.startswith(current2)), [None])
 
-        if data_source is None:
+        if data_source is None or base_path is None:
             raise Exception(f"The data source for catalog {catalog_id} could not be found.")
 
         original_catalog_id = self._get_original_catalog_id(base_path, catalog_id)
@@ -137,9 +139,9 @@ class PlaygroundDataSource(IDataSource):
         for request in requests:
 
             catalog_id = request.catalog_item.catalog.id
-            (data_source, base_path) = next(((current1, current2) for (current1, current2) in self._data_source_map.items() if catalog_id.startswith(current2)), None)
+            (data_source, base_path) = next(((current1, current2) for (current1, current2) in self._data_source_map.items() if catalog_id.startswith(current2)), [None])
 
-            if data_source is None:
+            if data_source is None or base_path is None:
                 raise Exception(f"The data source for catalog {catalog_id} could not be found.")
 
             original_catalog_id = self._get_original_catalog_id(base_path, catalog_id)

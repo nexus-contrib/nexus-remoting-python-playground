@@ -4,10 +4,10 @@ from gettext import Catalog
 from typing import Callable, cast
 
 import pytest
-from core import PlaygroundDataSource
+from data_source import PlaygroundDataSource
 from nexus_extensibility import (CatalogItem, DataSourceContext,
                                  ExtensibilityUtilities, ILogger, LogLevel,
-                                 ReadDataHandler, ReadRequest)
+                                 ReadDataHandler, ReadRequest, ResourceCatalog)
 
 
 class _NullLogger(ILogger):
@@ -34,15 +34,19 @@ async def playground_test():
     # act
     await data_source.set_context(context, logger)
     registrations = await data_source.get_catalog_registrations("/")
-    catalog = await data_source.get_catalog(registrations[1].path)
-    time_range = await data_source.get_time_range(registrations[1].path)
-    availability = await data_source.get_availability(registrations[1].path, begin, end)
+    catalog = await data_source.enrich_catalog(ResourceCatalog(registrations[0].path))
+    time_range = await data_source.get_time_range(registrations[0].path)
+    availability = await data_source.get_availability(registrations[0].path, begin, end)
 
+    assert catalog.resources is not None
     resource = catalog.resources[0]
+
+    assert resource.representations is not None
     representation = resource.representations[0]
-    catalog_item = CatalogItem(catalog, resource, representation)
+
+    catalog_item = CatalogItem(catalog, resource, representation, None)
     (data, status) = ExtensibilityUtilities.create_buffers(catalog_item.representation, begin, end)
-    request = ReadRequest(catalog_item, data, status)
+    request = ReadRequest(resource.id, catalog_item, data, status)
 
     await data_source.read(
         begin=datetime(2020, 1, 1), 
@@ -53,8 +57,8 @@ async def playground_test():
 
     # 
     assert len(registrations) == 2
-    assert registrations[0].path == "/MY/PATH/FRIENDLY_USER_1/CATALOG_1"
-    assert registrations[1].path == "/MY/PATH/FRIENDLY_USER_2/CATALOG_2"
+    assert registrations[0].path == "/MY/PATH/FRIENDLY_USER_2/CATALOG_2"
+    assert registrations[1].path == "/MY/PATH/FRIENDLY_USER_1/CATALOG_1"
     assert catalog.id == "/MY/PATH/FRIENDLY_USER_2/CATALOG_2"
     assert time_range == (datetime.min, datetime.max)
     assert math.isnan(availability)

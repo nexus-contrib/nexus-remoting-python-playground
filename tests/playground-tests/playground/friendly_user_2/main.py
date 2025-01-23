@@ -18,12 +18,12 @@ class MyDataSource(SimpleDataSource):
         else:
             return []
 
-    async def get_catalog(self, catalog_id: str) -> ResourceCatalog:
+    async def enrich_catalog(self, catalog: ResourceCatalog) -> ResourceCatalog:
 
         representation = Representation(NexusDataType.FLOAT64, timedelta(seconds=1))
         resource = Resource(id="resource_1", representations=[representation])
         
-        return ResourceCatalog(catalog_id, resources=[resource])
+        return ResourceCatalog(catalog.id, resources=[resource])
 
     async def read(
         self,
