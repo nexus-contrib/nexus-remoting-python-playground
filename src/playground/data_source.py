@@ -8,7 +8,7 @@ from nexus_extensibility import (CatalogRegistration, DataSourceContext,
                                  IDataSource, ILogger, LogLevel,
                                  ReadDataHandler, ReadRequest, ResourceCatalog)
 
-from utils import load_extensions
+from .utils import load_extensions
 
 
 class Playground(IDataSource):
