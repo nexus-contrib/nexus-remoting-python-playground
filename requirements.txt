@@ -1,2 +1,2 @@
-nexus-remoting==2.0.0b42
-pandas~=1.5.0
+nexus-remoting==2.0.0b44
+pandas~=2.2.3
