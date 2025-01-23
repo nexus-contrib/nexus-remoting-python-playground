@@ -11,7 +11,7 @@ from nexus_extensibility import (CatalogRegistration, DataSourceContext,
 from utils import load_extensions
 
 
-class PlaygroundDataSource(IDataSource):
+class Playground(IDataSource):
 
     _data_source_map: dict[IDataSource, str]
     _logger: ILogger

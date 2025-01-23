@@ -1,10 +1,9 @@
 import math
 from datetime import datetime
-from gettext import Catalog
 from typing import Callable, cast
 
 import pytest
-from data_source import PlaygroundDataSource
+from data_source import Playground
 from nexus_extensibility import (CatalogItem, DataSourceContext,
                                  ExtensibilityUtilities, ILogger, LogLevel,
                                  ReadDataHandler, ReadRequest, ResourceCatalog)
@@ -18,7 +17,7 @@ class _NullLogger(ILogger):
 async def playground_test():
 
     # arrange
-    data_source = PlaygroundDataSource()
+    data_source = Playground()
 
     source_configuration = { 
         "mount-path": "/MY/PATH",
