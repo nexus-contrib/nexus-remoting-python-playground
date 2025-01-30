@@ -29,7 +29,7 @@ jobs:
         run: |
           npm install -g pyright
           python -m pip install pytest pytest-asyncio
-          python -m pip install -r requirements.txt --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/
+          python -m pip install -r requirements.txt
 
       - name: Test
         run: |
