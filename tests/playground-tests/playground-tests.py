@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Callable, cast
 
 import pytest
-from data_source import Playground
+from playground.data_source import Playground
 from nexus_extensibility import (CatalogItem, DataSourceContext,
                                  ExtensibilityUtilities, ILogger, LogLevel,
                                  ReadDataHandler, ReadRequest, ResourceCatalog)
@@ -21,7 +21,7 @@ async def playground_test():
 
     source_configuration = { 
         "mount-path": "/MY/PATH",
-        "playground-folder": "tests/playground-tests/playground" 
+        "playground-folder": "tests/playground-tests/the-playground" 
     }
 
     logger = _NullLogger()
