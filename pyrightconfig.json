@@ -4,7 +4,7 @@
     "tests/playground-tests"
   ],
   "exclude": [
-    "tests/playground-tests/playground/unfriendly_user"
+    "tests/playground-tests/the-playground/unfriendly_user"
   ],
   "stubPath": "",
   "executionEnvironments":[
