@@ -1,2 +1,2 @@
-nexus-extensibility==2.0.0b45
+nexus-extensibility==2.0.0b50
 pandas~=2.2.3

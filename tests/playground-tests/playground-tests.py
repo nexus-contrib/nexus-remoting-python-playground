@@ -3,10 +3,12 @@ from datetime import datetime
 from typing import Callable, cast
 
 import pytest
+from nexus_extensibility import (CatalogItem, CatalogTimeRange,
+                                 DataSourceContext, ExtensibilityUtilities,
+                                 ILogger, LogLevel, ReadDataHandler,
+                                 ReadRequest, ResourceCatalog)
+
 from playground.data_source import Playground
-from nexus_extensibility import (CatalogItem, DataSourceContext,
-                                 ExtensibilityUtilities, ILogger, LogLevel,
-                                 ReadDataHandler, ReadRequest, ResourceCatalog)
 
 
 class _NullLogger(ILogger):
@@ -25,7 +27,7 @@ async def playground_test():
     }
 
     logger = _NullLogger()
-    context = DataSourceContext(None, None, source_configuration, None)
+    context = DataSourceContext(None, source_configuration, None)
 
     begin = datetime(2020, 1, 1)
     end = datetime(2020, 1, 2)
@@ -59,5 +61,5 @@ async def playground_test():
     assert registrations[0].path == "/MY/PATH/FRIENDLY_USER_2/CATALOG_2"
     assert registrations[1].path == "/MY/PATH/FRIENDLY_USER_1/CATALOG_1"
     assert catalog.id == "/MY/PATH/FRIENDLY_USER_2/CATALOG_2"
-    assert time_range == (datetime.min, datetime.max)
+    assert time_range == CatalogTimeRange(datetime.min, datetime.max)
     assert math.isnan(availability)

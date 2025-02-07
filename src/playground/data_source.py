@@ -6,9 +6,10 @@ from typing import Callable, Tuple, cast
 
 import numpy  # required to make it available in user defined playground extensions
 import pandas  # required to make it available in user defined playground extensions
-from nexus_extensibility import (CatalogRegistration, DataSourceContext,
-                                 IDataSource, ILogger, LogLevel,
-                                 ReadDataHandler, ReadRequest, ResourceCatalog)
+from nexus_extensibility import (CatalogRegistration, CatalogTimeRange,
+                                 DataSourceContext, IDataSource, ILogger,
+                                 LogLevel, ReadDataHandler, ReadRequest,
+                                 ResourceCatalog)
 
 from .utils import load_extensions
 
@@ -106,7 +107,7 @@ class Playground(IDataSource):
 
         return catalog
 
-    async def get_time_range(self, catalog_id: str) -> Tuple[datetime, datetime]:
+    async def get_time_range(self, catalog_id: str) -> CatalogTimeRange:
 
         (data_source, base_path) = next(((current1, current2) for (current1, current2) in self._data_source_map.items() if catalog_id.startswith(current2)), [None])
 
