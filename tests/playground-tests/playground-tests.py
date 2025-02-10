@@ -8,7 +8,7 @@ from nexus_extensibility import (CatalogItem, CatalogTimeRange,
                                  ILogger, LogLevel, ReadDataHandler,
                                  ReadRequest, ResourceCatalog)
 
-from playground.data_source import Playground
+from playground.data_source import Playground, PlaygroundSettings
 
 
 class _NullLogger(ILogger):
@@ -21,10 +21,10 @@ async def playground_test():
     # arrange
     data_source = Playground()
 
-    source_configuration = { 
-        "mount-path": "/MY/PATH",
-        "playground-folder": "tests/playground-tests/the-playground" 
-    }
+    source_configuration = PlaygroundSettings( 
+        mount_path="/MY/PATH",
+        playground_folder="tests/playground-tests/the-playground" 
+    )
 
     logger = _NullLogger()
     context = DataSourceContext(None, source_configuration, None)

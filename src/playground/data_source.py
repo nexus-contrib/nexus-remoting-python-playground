@@ -1,8 +1,9 @@
 import dataclasses
 import inspect
 import sys
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Tuple, cast
+from typing import Callable
 
 import numpy  # required to make it available in user defined playground extensions
 import pandas  # required to make it available in user defined playground extensions
@@ -14,46 +15,41 @@ from nexus_extensibility import (CatalogRegistration, CatalogTimeRange,
 from .utils import load_extensions
 
 
-class Playground(IDataSource):
+@dataclass(frozen=True)
+class PlaygroundSettings():
+    mount_path: str
+    playground_folder: str
+
+class Playground(IDataSource[PlaygroundSettings]):
 
     _data_source_map: dict[IDataSource, str]
     _logger: ILogger
 
-    async def set_context(self, context: DataSourceContext, logger: ILogger) -> None:
+    async def set_context(self, context: DataSourceContext[PlaygroundSettings], logger: ILogger) -> None:
 
         self._logger = logger
-
-        # mount path
-        if context.source_configuration is not None and "mount-path" in context.source_configuration:
-            mount_path = cast(str, context.source_configuration["mount-path"])
-
-        else:
-            raise Exception("The mount-path property is not set.")
 
         # load modules
         self._data_source_map = {}
 
-        if context.source_configuration is not None and "playground-folder" in context.source_configuration:
+        playground_folder = context.source_configuration.playground_folder
 
-            playground_folder = cast(str, context.source_configuration["playground-folder"])
+        if not playground_folder in sys.path:
+            sys.path.append(playground_folder)
 
-            if not playground_folder in sys.path:
-                sys.path.append(playground_folder)
+        extensions = load_extensions(playground_folder, logger)
 
-            extensions = load_extensions(playground_folder, logger)
+        filtered_data_source_types = (data_source_type for data_source_type in extensions \
+            if issubclass(data_source_type, IDataSource) and not inspect.isabstract(data_source_type))
 
-            filtered_data_source_types = (data_source_type for data_source_type in extensions \
-                if issubclass(data_source_type, IDataSource) and not inspect.isabstract(data_source_type))
+        mount_path = context.source_configuration.mount_path
 
-            for data_source_type in filtered_data_source_types:
-                data_source = data_source_type()
-                user_name = data_source.__module__.split('.')[0].upper()
-                base_path = f"{mount_path}/{user_name}"
+        for data_source_type in filtered_data_source_types:
+            data_source = data_source_type()
+            user_name = data_source.__module__.split('.')[0].upper()
+            base_path = f"{mount_path}/{user_name}"
 
-                self._data_source_map[data_source] = base_path
-
-        else:
-            raise Exception("The playground-folder property is not set.")
+            self._data_source_map[data_source] = base_path
 
         # invoke modules
         for data_source in self._data_source_map:
