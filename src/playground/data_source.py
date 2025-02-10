@@ -18,7 +18,6 @@ from .utils import load_extensions
 @dataclass(frozen=True)
 class PlaygroundSettings():
     mount_path: str
-    playground_folder: str
 
 class Playground(IDataSource[PlaygroundSettings]):
 
@@ -32,7 +31,13 @@ class Playground(IDataSource[PlaygroundSettings]):
         # load modules
         self._data_source_map = {}
 
-        playground_folder = context.source_configuration.playground_folder
+        if (context.resource_locator is None or context.resource_locator.path is None):
+            raise Exception(f"No resource locator provided.")
+
+        if (context.resource_locator.scheme != "file"):
+            raise Exception(f"Expected 'file' URI scheme, but got '{context.resource_locator.scheme}'.")
+
+        playground_folder = context.resource_locator.path
 
         if not playground_folder in sys.path:
             sys.path.append(playground_folder)

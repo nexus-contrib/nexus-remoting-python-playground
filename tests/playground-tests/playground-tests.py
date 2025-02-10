@@ -1,6 +1,8 @@
 import math
+import os
 from datetime import datetime
 from typing import Callable, cast
+from urllib.parse import urlparse
 
 import pytest
 from nexus_extensibility import (CatalogItem, CatalogTimeRange,
@@ -22,12 +24,16 @@ async def playground_test():
     data_source = Playground()
 
     source_configuration = PlaygroundSettings( 
-        mount_path="/MY/PATH",
-        playground_folder="tests/playground-tests/the-playground" 
+        mount_path="/MY/PATH"
     )
 
     logger = _NullLogger()
-    context = DataSourceContext(None, source_configuration, None)
+
+    context = DataSourceContext(
+        urlparse(f"file://{os.getcwd()}/tests/playground-tests/the-playground"),
+        source_configuration,
+        None
+    )
 
     begin = datetime(2020, 1, 1)
     end = datetime(2020, 1, 2)
